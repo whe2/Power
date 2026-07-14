@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador de Clientes Excel (.xlsx)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+
+    <div class="max-w-6xl mx-auto p-6">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-blue-700">Comparador de Archivos Excel (.xlsx)</h1>
+            <p class="text-gray-500 mt-2">Carga directamente los archivos de Excel para auditar variaciones y deudas.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-xl shadow-xs border border-gray-200">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Archivo Excel Anterior (Día Base):</label>
+                <input type="file" id="fileOld" accept=".xlsx, .xls" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-xs border border-gray-200">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Archivo Excel Nuevo (Día Actual):</label>
+                <input type="file" id="fileNew" accept=".xlsx, .xls" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <button id="btnProcesar" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all cursor-pointer">
+                Procesar y Comparar Excel
+            </button>
+        </div>
+
+        <div id="resultadosSection" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-xl">
+                    <p class="text-sm text-orange-700 font-semibold">Cambios de Plan/Monto</p>
+                    <p id="countCambios" class="text-2xl font-bold text-orange-900">0</p>
+                </div>
+                <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-xl">
+                    <p class="text-sm text-purple-700 font-semibold">Cambios de Estado</p>
+                    <p id="countEstados" class="text-2xl font-bold text-purple-900">0</p>
+                </div>
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+                    <p class="text-sm text-red-700 font-semibold">Activos con Deuda (Saldo Negativo)</p>
+                    <p id="countDeudores" class="text-2xl font-bold text-red-900">0</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end mb-4">
+                <button id="btnDescargar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-5 rounded-md shadow-xs flex items-center gap-2 cursor-pointer">
+                    📥 Descargar Reporte de Variaciones (.xlsx)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let datosCambios = [];
+        let datosEstatus = [];
+        let datosDeudores = [];
+
+        document.getElementById('btnProcesar').addEventListener('click', async () => {
+            const fileOld = document.getElementById('fileOld').files[0];
+            const fileNew = document.getElementById('fileNew').files[0];
+
+            if (!fileOld || !fileNew) {
+                alert('Por favor, selecciona ambos archivos Excel (.xlsx) para continuar.');
+                return;
+            }
+
+            // Limpiar datos previos
+            datosCambios = []; datosEstatus = []; datosDeudores = [];
+
+            try {
+                // Leer ambos archivos de Excel
+                const dataOld = await readExcel(fileOld);
+                const dataNew = await readExcel(fileNew);
+
+                // Indexar el archivo antiguo usando el "ID Servicio"
+                const mapOld = new Map();
+                dataOld.forEach(row => {
+                    if (row['ID Servicio']) {
+                        mapOld.set(String(row['ID Servicio']).trim(), row);
+                    }
+                });
+
+                // Comparar contra el archivo nuevo
+                dataNew.forEach(rowNew => {
+                    if (!rowNew['ID Servicio']) return;
+                    const idServicio = String(rowNew['ID Servicio']).trim();
+                    const rowOld = mapOld.get(idServicio);
+
+                    // 1. Detección de Activos con Deuda (Estado: ACTIVO y Saldo actual < 0)
+                    const estadoServicioNew = rowNew['Estado servicio'] ? String(rowNew['Estado servicio']).trim().toUpperCase() : '';
+                    const saldoActual = parseFloat(rowNew['Saldo actual']) || 0;
+
+                    if (estadoServicioNew === 'ACTIVO' && saldoActual < 0) {
+                        datosDeudores.push({
+                            'ID Servicio': idServicio,
+                            'Cédula': rowNew['Cédula'],
+                            'Nombres': rowNew['Nombres'],
+                            'Estado servicio': rowNew['Estado servicio'],
+                            'Saldo Actual (Deuda)': saldoActual,
+                            'Plan': rowNew['Plan'],
+                            'Costo del plan': rowNew['Costo del plan'],
+                            'Teléfono 1': rowNew['Teléfono 1'],
+                            'Correo': rowNew['Correo']
+                        });
+                    }
+
+                    // Si el cliente existía en el archivo anterior, analizamos variaciones de un día a otro
+                    if (rowOld) {
+                        // 2. Variaciones de Planes y Costos del Plan
+                        const planOld = rowOld['Plan'] ? String(rowOld['Plan']).trim() : '';
+                        const planNew = rowNew['Plan'] ? String(rowNew['Plan']).trim() : '';
+                        const costoOld = parseFloat(rowOld['Costo del plan']) || 0;
+                        const costoNew = parseFloat(rowNew['Costo del plan']) || 0;
+
+                        if (planOld !== planNew || costoOld !== costoNew) {
+                            datosCambios.push({
+                                'ID Servicio': idServicio,
+                                'Cédula': rowNew['Cédula'],
+                                'Nombres': rowNew['Nombres'],
+                                'Plan Anterior': rowOld['Plan'],
+                                'Plan Nuevo': rowNew['Plan'],
+                                'Costo Anterior': costoOld,
+                                'Costo Nuevo': costoNew,
+                                'Variación Costo': costoNew - costoOld,
+                                'Fecha Último Cambio': rowNew['Fecha última cambio de estado']
+                            });
+                        }
+
+                        // 3. Variaciones de Cambios de Estado de Servicio
+                        const estatusOld = rowOld['Estado servicio'] ? String(rowOld['Estado servicio']).trim() : '';
+                        const estatusNew = rowNew['Estado servicio'] ? String(rowNew['Estado servicio']).trim() : '';
+
+                        if (estatusOld !== estatusNew) {
+                            datosEstatus.push({
+                                'ID Servicio': idServicio,
+                                'Cédula': rowNew['Cédula'],
+                                'Nombres': rowNew['Nombres'],
+                                'Estado Anterior': rowOld['Estado servicio'],
+                                'Estado Nuevo': rowNew['Estado servicio'],
+                                'Fecha Último Cambio': rowNew['Fecha última cambio de estado']
+                            });
+                        }
+                    }
+                });
+
+                // Mostrar los contadores en la vista
+                document.getElementById('countCambios').innerText = datosCambios.length;
+                document.getElementById('countEstados').innerText = datosEstatus.length;
+                document.getElementById('countDeudores').innerText = datosDeudores.length;
+                document.getElementById('resultadosSection').classList.remove('hidden');
+
+                alert('¡Comparación de archivos Excel exitosa!');
+
+            } catch (error) {
+                console.error(error);
+                alert('Ocurrió un error al procesar las hojas de Excel. Asegúrate de que las columnas tengan los nombres exactos (ID Servicio, Plan, Costo del plan, Estado servicio, Saldo actual, Fecha última cambio de estado).');
+            }
+        });
+
+        // Generar descarga del Excel final por pestañas
+        document.getElementById('btnDescargar').addEventListener('click', () => {
+            const wb = XLSX.utils.book_new();
+
+            const wsCambios = XLSX.utils.json_to_sheet(datosCambios);
+            XLSX.utils.book_append_sheet(wb, wsCambios, "Cambios de Plan y Montos");
+
+            const wsEstatus = XLSX.utils.json_to_sheet(datosEstatus);
+            XLSX.utils.book_append_sheet(wb, wsEstatus, "Cambios de Estatus");
+
+            const wsDeudores = XLSX.utils.json_to_sheet(datosDeudores);
+            XLSX.utils.book_append_sheet(wb, wsDeudores, "Activos con Deuda");
+
+            XLSX.writeFile(wb, `Reporte_Variaciones_Auditoria_${new Date().toISOString().slice(0,10)}.xlsx`);
+        });
+
+        // Función con Promesa para convertir el binario de Excel (.xlsx) a un Objeto JSON legible
+        function readExcel(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    // Tomamos la primera pestaña del libro de Excel cargado
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    // Convertimos las filas a JSON (usando la fila 1 de encabezados)
+                    const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                    resolve(json);
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+    </script>
+</body>
+</html>

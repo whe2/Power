@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador de Clientes & Auditoría</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+
+    <div class="max-w-6xl mx-auto p-6">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-blue-700">Comparador de Archivos de Clientes</h1>
+            <p class="text-gray-500 mt-2">Detecta variaciones de planes, montos, estatus y clientes activos con deuda.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-5 rounded-xl shadow-xs border border-gray-200">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Archivo Base (Día Anterior / Anterior):</label>
+                <input type="file" id="fileOld" accept=".csv" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-xs border border-gray-200">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Archivo Nuevo (Día Actual / Reciente):</label>
+                <input type="file" id="fileNew" accept=".csv" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <button id="btnProcesar" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Procesar y Comparar Datos
+            </button>
+        </div>
+
+        <div id="resultadosSection" class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-xl">
+                    <p class="text-sm text-orange-700 font-semibold">Cambios de Plan/Monto</p>
+                    <p id="countCambios" class="text-2xl font-bold text-orange-900">0</p>
+                </div>
+                <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-xl">
+                    <p class="text-sm text-purple-700 font-semibold">Cambios de Estado</p>
+                    <p id="countEstados" class="text-2xl font-bold text-purple-900">0</p>
+                </div>
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl">
+                    <p class="text-sm text-red-700 font-semibold">Activos con Deuda (Saldo Negativo)</p>
+                    <p id="countDeudores" class="text-2xl font-bold text-red-900">0</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end mb-4">
+                <button id="btnDescargar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-5 rounded-md shadow-xs flex items-center gap-2 cursor-pointer">
+                    📥 Descargar Reporte en Excel (.xlsx)
+                </button>
+            </div>
+            
+            <p class="text-xs text-gray-400 italic text-right">Nota: Los resultados completos se exportarán organizados en pestañas dentro del archivo Excel.</p>
+        </div>
+    </div>
+
+    <script>
+        let datosCambios = [];
+        let datosEstatus = [];
+        let datosDeudores = [];
+
+        document.getElementById('btnProcesar').addEventListener('click', async () => {
+            const fileOld = document.getElementById('fileOld').files[0];
+            const fileNew = document.getElementById('fileNew').files[0];
+
+            if (!fileOld || !fileNew) {
+                alert('Por favor, selecciona ambos archivos para poder realizar la comparación.');
+                return;
+            }
+
+            // Inicializar/limpiar arrays
+            datosCambios = []; datosEstatus = []; datosDeudores = [];
+
+            try {
+                const dataOld = await parseCSV(fileOld);
+                const dataNew = await parseCSV(fileNew);
+
+                // Mapear archivo antiguo por "ID Servicio" o "ID Usuario" (usaremos ID Servicio como llave primaria)
+                const mapOld = new Map();
+                dataOld.forEach(row => {
+                    if(row['ID Servicio']) mapOld.set(row['ID Servicio'].trim(), row);
+                });
+
+                // Procesar el archivo nuevo y comparar
+                dataNew.forEach(rowNew => {
+                    const idServicio = rowNew['ID Servicio'] ? rowNew['ID Servicio'].trim() : null;
+                    if (!idServicio) return;
+
+                    const rowOld = mapOld.get(idServicio);
+
+                    // 1. Regla Especial: Clientes Activos con Deuda (Saldo Negativo) en el archivo nuevo
+                    const estadoServicioNew = rowNew['Estado servicio'] ? rowNew['Estado servicio'].trim().toUpperCase() : '';
+                    const saldoActual = parseFloat(rowNew['Saldo actual']) || 0;
+
+                    if (estadoServicioNew === 'ACTIVO' && saldoActual < 0) {
+                        datosDeudores.push({
+                            'ID Servicio': idServicio,
+                            'Cédula': rowNew['Cédula'],
+                            'Nombres': rowNew['Nombres'],
+                            'Estado servicio': rowNew['Estado servicio'],
+                            'Saldo Actual (Deuda)': saldoActual,
+                            'Plan': rowNew['Plan'],
+                            'Teléfono': rowNew['Teléfono 1'],
+                            'Correo': rowNew['Correo']
+                        });
+                    }
+
+                    // Si existe en el anterior, comparamos variaciones
+                    if (rowOld) {
+                        // 2. Comparación de Planes y Variación de Costo
+                        if (rowOld['Plan'] !== rowNew['Plan'] || rowOld['Costo del plan'] !== rowNew['Costo del plan']) {
+                            const costoOld = parseFloat(rowOld['Costo del plan']) || 0;
+                            const costoNew = parseFloat(rowNew['Costo del plan']) || 0;
+                            
+                            datosCambios.push({
+                                'ID Servicio': idServicio,
+                                'Cédula': rowNew['Cédula'],
+                                'Nombres': rowNew['Nombres'],
+                                'Plan Anterior': rowOld['Plan'],
+                                'Plan Nuevo': rowNew['Plan'],
+                                'Costo Anterior': costoOld,
+                                'Costo Nuevo': costoNew,
+                                'Variación Costo': costoNew - costoOld,
+                                'Fecha Últ. Cambio Estado': rowNew['Fecha última cambio de estado']
+                            });
+                        }
+
+                        // 3. Comparación de Estado de Servicio
+                        if (rowOld['Estado servicio'] !== rowNew['Estado servicio']) {
+                            datosEstatus.push({
+                                'ID Servicio': idServicio,
+                                'Cédula': rowNew['Cédula'],
+                                'Nombres': rowNew['Nombres'],
+                                'Estado Anterior': rowOld['Estado servicio'],
+                                'Estado Nuevo': rowNew['Estado servicio'],
+                                'Fecha Cambio Reportada': rowNew['Fecha última cambio de estado']
+                            });
+                        }
+                    }
+                });
+
+                // Actualizar interfaz con los contadores
+                document.getElementById('countCambios').innerText = datosCambios.length;
+                document.getElementById('countEstados').innerText = datosEstatus.length;
+                document.getElementById('countDeudores').innerText = datosDeudores.length;
+                document.getElementById('resultadosSection').classList.remove('hidden');
+
+                alert('¡Comparación finalizada con éxito! Ya puedes revisar el resumen y descargar el Excel.');
+
+            } catch (error) {
+                console.error(error);
+                alert('Ocurrió un error al procesar los archivos. Asegúrate de que sean archivos válidos con las columnas correctas.');
+            }
+        });
+
+        // Descarga estructurada en múltiples pestañas de Excel
+        document.getElementById('btnDescargar').addEventListener('click', () => {
+            const wb = XLSX.utils.book_new();
+
+            // Pestaña 1: Variaciones de Plan
+            const wsCambios = XLSX.utils.json_to_sheet(datosCambios);
+            XLSX.utils.book_append_sheet(wb, wsCambios, "Cambios de Plan y Montos");
+
+            // Pestaña 2: Variaciones de Estatus
+            const wsEstatus = XLSX.utils.json_to_sheet(datosEstatus);
+            XLSX.utils.book_append_sheet(wb, wsEstatus, "Cambios de Estatus");
+
+            // Pestaña 3: Activos con Deuda
+            const wsDeudores = XLSX.utils.json_to_sheet(datosDeudores);
+            XLSX.utils.book_append_sheet(wb, wsDeudores, "Activos con Deuda");
+
+            // Generar archivo y forzar descarga
+            XLSX.writeFile(wb, `Reporte_Variaciones_Clientes_${new Date().toISOString().slice(0,10)}.xlsx`);
+        });
+
+        // Promesa para parsear CSV fácilmente con PapaParse
+        function parseCSV(file) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    dynamicTyping: false, // Tratamos todo como texto inicial para evitar perder formatos de IDs/Teléfonos
+                    complete: (results) => resolve(results.data),
+                    error: (error) => reject(error)
+                });
+            });
+        }
+    </script>
+</body>
+</html>
