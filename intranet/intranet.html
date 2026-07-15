@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intranet - The Hub (Fase 1)</title>
+    <title>Intranet - The Hub (Fase 1 Mejorada)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* --- VARIABLES DE COLOR (PALETA SELECCIONADA) --- */
+        /* --- VARIABLES DE COLOR (PALETA BLACK AND GOLD ELEGANCE) --- */
         :root {
             --fondo-principal: #E5E5E5; /* Gris claro */
             --blanco: #FFFFFF;
-            --cabeceras: #14213D;       /* Azul oscuro/Casi negro */
-            --acento: #FCA311;          /* Dorado/Naranja */
+            --cabeceras: #14213D;       /* Azul oscuro / Casi negro */
+            --acento: #FCA311;          /* Dorado / Naranja */
             --texto-negro: #000000;     /* Negro */
         }
 
         * {
             margin: 0;
             padding: 0;
-            box-box-sizing: border-box;
+            box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
@@ -178,54 +178,144 @@
         .btn-navy { background-color: var(--cabeceras); }
         .btn-gray { background-color: #5c677d; }
 
-        /* --- COLUMNA 2: NOVEDADES Y METRICAS --- */
-        .shout-out {
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 15px;
-            background-color: #fcfcfc;
-        }
-
-        .shout-out-header {
+        /* --- COLUMNA 2: NUEVO CARRUSEL DE EMPLEADOS --- */
+        .employee-carousel {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            font-size: 13px;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 10px 0;
+            scrollbar-width: thin;
         }
 
-        .shout-out-header img {
-            width: 40px;
-            height: 40px;
+        .employee-carousel::-webkit-scrollbar {
+            height: 6px;
+        }
+        .employee-carousel::-webkit-scrollbar-thumb {
+            background-color: var(--acento);
+            border-radius: 10px;
+        }
+
+        .employee-card {
+            flex: 0 0 90px;
+            text-align: center;
+        }
+
+        .employee-card img {
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--acento);
+            margin-bottom: 8px;
         }
 
+        .employee-card span {
+            font-size: 12px;
+            display: block;
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* --- COLUMNA 2: MÉTRICAS CRECIMIENTO POWER --- */
         .kpi-container {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 12px;
             margin-top: 15px;
         }
 
         .kpi-card {
-            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background-color: var(--cabeceras);
             color: var(--blanco);
-            padding: 15px;
+            padding: 18px 20px;
             border-radius: 6px;
-            text-align: center;
         }
 
-        .kpi-card.down { background-color: #5c677d; }
+        .kpi-card.alt { background-color: #243556; }
 
-        .kpi-card h3 { font-size: 22px; color: var(--acento); margin: 5px 0;}
-        .kpi-card span { font-size: 11px; color: #ccc; }
+        .kpi-card .kpi-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #E5E5E5;
+        }
 
-        /* --- COLUMNA 3: INTERACTIVA --- */
-        .calendar-mock {
-            border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 6px;
+        .kpi-card .kpi-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--acento);
+        }
+
+        /* --- COLUMNA 3: CALENDARIO COMPLETO MENSUAL --- */
+        .calendar-wrapper {
+            width: 100%;
+        }
+
+        .calendar-header-month {
             text-align: center;
+            font-weight: bold;
+            color: var(--cabeceras);
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .calendar-day-name {
+            font-weight: bold;
+            color: #666;
+            padding-bottom: 5px;
+        }
+
+        .calendar-day {
+            padding: 6px 0;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            color: #333;
+        }
+
+        .calendar-day.active {
+            background-color: var(--acento);
+            color: var(--texto-negro);
+            font-weight: bold;
+        }
+
+        /* --- COLUMNA 3: SECCIÓN PRÓXIMO CUMPLEAÑOS --- */
+        .birthday-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: linear-gradient(135deg, #ffffff, #fffdf6);
+            border: 1px dashed var(--acento);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .birthday-card img {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--acento);
+        }
+
+        .birthday-info h4 {
+            font-size: 14px;
+            color: var(--cabeceras);
+        }
+
+        .birthday-info p {
+            font-size: 12px;
+            color: #666;
         }
 
         .feedback-form textarea {
@@ -255,7 +345,6 @@
             z-index: 1000;
         }
 
-        /* Botón Cerrado */
         .chat-button {
             background-color: var(--acento);
             width: 60px;
@@ -273,9 +362,8 @@
 
         .chat-button:hover { transform: scale(1.05); }
 
-        /* Ventana de Chat Abierta */
         .chat-window {
-            display: none; /* Oculto por defecto */
+            display: none;
             width: 320px;
             height: 400px;
             background-color: var(--blanco);
@@ -339,7 +427,7 @@
             outline: none;
         }
 
-        /* --- RESPONSIVE BÁSICO --- */
+        /* --- RESPONSIVE --- */
         @media (max-width: 900px) {
             .main-container {
                 grid-template-columns: 1fr;
@@ -356,7 +444,7 @@
             <input type="text" placeholder="Buscar documentos, personas, recursos...">
         </div>
         <div class="user-menu">
-            <i class="fa-solid ref-chat fa-comment-dots" onclick="toggleChat()" title="Abrir Chat QuickLink"></i>
+            <i class="fa-solid fa-comment-dots" onclick="toggleChat()" title="Abrir Chat"></i>
             <i class="fa-solid fa-bell"></i>
             <i class="fa-solid fa-user-circle"></i> Sabina
         </div>
@@ -392,33 +480,45 @@
 
         <section>
             <div class="card">
-                <div class="section-title">Shout-outs</div>
-                <div class="shout-out">
-                    <div class="shout-out-header">
-                        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100" alt="Sabina">
-                        <div>
-                            <strong>Sabina Saetgareeva</strong> reconoció a <strong>Yaroslav P.</strong>
-                            <br><small>Hace 2 días</small>
-                        </div>
+                <div class="section-title">Nuestro Equipo</div>
+                <div class="employee-carousel">
+                    <div class="employee-card">
+                        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100" alt="Empleado 1">
+                        <span>Sabina S.</span>
                     </div>
-                    <p style="font-size: 13px; color: #444;">¡Gran trabajo coordinando el despliegue del sistema el viernes pasado con el equipo de DevOps!</p>
+                    <div class="employee-card">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100" alt="Empleado 2">
+                        <span>Yaroslav P.</span>
+                    </div>
+                    <div class="employee-card">
+                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=100" alt="Empleado 3">
+                        <span>Jane Smith</span>
+                    </div>
+                    <div class="employee-card">
+                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100" alt="Empleado 4">
+                        <span>Rosa Bell</span>
+                    </div>
+                    <div class="employee-card">
+                        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100" alt="Empleado 5">
+                        <span>Carlos M.</span>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="section-title">Métricas del Trimestre</div>
+                <div class="section-title">Métricas del Trimestre: Crecimiento Power</div>
                 <div class="kpi-container">
                     <div class="kpi-card">
-                        <span>Préstamos</span>
-                        <h3>23% ↑</h3>
+                        <span class="kpi-title">Clientes activos</span>
+                        <span class="kpi-value">23% ↑</span>
+                    </div>
+                    <div class="kpi-card alt">
+                        <span class="kpi-title">Clientes powerlin Go</span>
+                        <span class="kpi-value">5.2% ↑</span>
                     </div>
                     <div class="kpi-card">
-                        <span>Inversión</span>
-                        <h3>5.2% ↑</h3>
-                    </div>
-                    <div class="kpi-card down">
-                        <span>Nuevas Cuentas</span>
-                        <h3>27.6K ↓</h3>
+                        <span class="kpi-title">Zonas habilitadas</span>
+                        <span class="kpi-value">27.6K ↓</span>
                     </div>
                 </div>
             </div>
@@ -426,10 +526,32 @@
 
         <section>
             <div class="card">
-                <div class="section-title">Calendario</div>
-                <div class="calendar-mock">
-                    <p style="font-weight: bold; color: var(--cabeceras);">Julio 2026</p>
-                    <p style="font-size: 12px; margin-top: 10px; color: #666;">Próximo evento: <strong>Inducción Nuevos Ingresos</strong> <br> 4:00 PM - 5:00 PM</p>
+                <div class="section-title">Calendario Institucional</div>
+                <div class="calendar-wrapper">
+                    <div class="calendar-header-month">Julio 2026</div>
+                    <div class="calendar-grid">
+                        <div class="calendar-day-name">L</div>
+                        <div class="calendar-day-name">M</div>
+                        <div class="calendar-day-name">X</div>
+                        <div class="calendar-day-name">J</div>
+                        <div class="calendar-day-name">V</div>
+                        <div class="calendar-day-name">S</div>
+                        <div class="calendar-day-name">D</div>
+                        <div class="calendar-day"></div><div class="calendar-day"></div><div class="calendar-day">1</div><div class="calendar-day">2</div><div class="calendar-day">3</div><div class="calendar-day">4</div><div class="calendar-day">5</div>
+                        <div class="calendar-day">6</div><div class="calendar-day">7</div><div class="calendar-day">8</div><div class="calendar-day">9</div><div class="calendar-day">10</div><div class="calendar-day">11</div><div class="calendar-day">12</div>
+                        <div class="calendar-day">13</div><div class="calendar-day">14</div><div class="calendar-day active" title="Hoy">15</div><div class="calendar-day">16</div><div class="calendar-day">17</div><div class="calendar-day">18</div><div class="calendar-day">19</div>
+                        <div class="calendar-day">20</div><div class="calendar-day">21</div><div class="calendar-day">22</div><div class="calendar-day">23</div><div class="calendar-day">24</div><div class="calendar-day">25</div><div class="calendar-day">26</div>
+                        <div class="calendar-day">27</div><div class="calendar-day">28</div><div class="calendar-day">29</div><div class="calendar-day">30</div><div class="calendar-day">31</div>
+                    </div>
+                </div>
+
+                <div class="birthday-card">
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100" alt="Cumpleañero">
+                    <div class="birthday-info">
+                        <h4>🎉 Próximo Cumpleaños</h4>
+                        <p><strong>Carlos Mendoza</strong></p>
+                        <p><small>18 de Julio</small></p>
+                    </div>
                 </div>
             </div>
 
@@ -483,7 +605,6 @@
                 const input = document.getElementById('chatInput');
                 const chatBody = document.getElementById('chatBody');
                 if (input.value.trim() !== "") {
-                    // Agregar mensaje del usuario en tiempo real de forma visual
                     chatBody.innerHTML += `<p style="margin-top:5px;"><strong>Tú:</strong> ${input.value}</p>`;
                     input.value = "";
                     chatBody.scrollTop = chatBody.scrollHeight;
